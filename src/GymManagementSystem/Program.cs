@@ -1,11 +1,28 @@
-﻿using GymManagementSystem.Native;
+﻿using GymManagementSystem.Functional;
+using GymManagementSystem.Persistence;
 
-Console.WriteLine("Native C Library Test");
+var result = MemberDataLoader.LoadMembers("data/members.json");
 
-double low = NativeWorkoutCalculator.CalculateLoad(60, 1);
-double medium = NativeWorkoutCalculator.CalculateLoad(60, 2);
-double high = NativeWorkoutCalculator.CalculateLoad(60, 3);
+switch (result)
+{
+    case Result<IReadOnlyList<GymManagementSystem.Models.Member>>
+        .Success(var members):
 
-Console.WriteLine($"Low intensity: {low}");
-Console.WriteLine($"Medium intensity: {medium}");
-Console.WriteLine($"High intensity: {high}");
+        Console.WriteLine("Members loaded successfully!");
+        Console.WriteLine($"Total members: {members.Count}");
+
+        foreach (var member in members)
+        {
+            Console.WriteLine(
+                $"{member.Id}. {member.Name}, Age: {member.Age}");
+        }
+
+        break;
+
+    case Result<IReadOnlyList<GymManagementSystem.Models.Member>>
+        .Failure(var code, var message):
+
+        Console.WriteLine($"Error: {code}");
+        Console.WriteLine(message);
+        break;
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "Id": 1,
+    "Name": "Michael Jordan",
+    "Age": 22
+  },
+  {
+    "Id": 2,
+    "Name": "Stephen Curry",
+    "Age": 30
+  },
+  {
+    "Id": 3,
+    "Name": "Lebron James",
+    "Age": 19
+  },
+  {
+    "Id": 4,
+    "Name": "Kobe Bryant",
+    "Age": 45
+  }
+]
