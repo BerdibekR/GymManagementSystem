@@ -1,0 +1,29 @@
+[
+  {
+    "Id": 1,
+    "MemberId": 1,
+    "TrainerId": 1,
+    "StartTime": "2026-11-17T10:00:00",
+    "DurationMinutes": 60,
+    "Intensity": "High",
+    "Status": "Completed"
+  },
+  {
+    "Id": 2,
+    "MemberId": 2,
+    "TrainerId": 2,
+    "StartTime": "2026-11-17T12:00:00",
+    "DurationMinutes": 45,
+    "Intensity": "Medium",
+    "Status": "Scheduled"
+  },
+  {
+    "Id": 3,
+    "MemberId": 3,
+    "TrainerId": 3,
+    "StartTime": "2026-11-17T14:00:00",
+    "DurationMinutes": 90,
+    "Intensity": "High",
+    "Status": "Scheduled"
+  }
+]

@@ -7,36 +7,74 @@ var membersResult =
 
 if (membersResult is Result<IReadOnlyList<Member>>.Failure memberError)
 {
-    Console.WriteLine($"Member loading error: {memberError.Message}");
+    Console.WriteLine($"Member error: {memberError.Message}");
     return;
 }
 
 var members =
     ((Result<IReadOnlyList<Member>>.Success)membersResult).Value;
 
-var membershipsResult =
-    MembershipDataLoader.LoadMemberships(
-        "data/memberships.json",
-        members);
+var trainersResult =
+    TrainerDataLoader.LoadTrainers("data/trainers.json");
 
-switch (membershipsResult)
+if (trainersResult is Result<IReadOnlyList<Trainer>>.Failure trainerError)
 {
-    case Result<IReadOnlyList<Membership>>.Success(var memberships):
-        Console.WriteLine("Memberships loaded successfully!");
-        Console.WriteLine($"Total memberships: {memberships.Count}");
+    Console.WriteLine($"Trainer error: {trainerError.Message}");
+    return;
+}
 
-        foreach (var membership in memberships)
+var trainers =
+    ((Result<IReadOnlyList<Trainer>>.Success)trainersResult).Value;
+
+var sessionsResult =
+    WorkoutSessionDataLoader.LoadSessions(
+        "data/workout-sessions.json",
+        members,
+        trainers);
+
+switch (sessionsResult)
+{
+    case Result<IReadOnlyList<WorkoutSession>>.Success(var sessions):
+        Console.WriteLine("All data loaded successfully!");
+        Console.WriteLine($"Members: {members.Count}");
+        Console.WriteLine($"Trainers: {trainers.Count}");
+        Console.WriteLine($"Workout sessions: {sessions.Count}");
+
+        Console.WriteLine("\nWorkout Sessions:");
+
+        foreach (var session in sessions)
         {
             Console.WriteLine(
-                $"ID: {membership.Id} | " +
-                $"Member ID: {membership.MemberId} | " +
-                $"Type: {membership.Type} | " +
-                $"Price: {membership.Price}");
+                $"ID: {session.Id} | " +
+                $"Member: {session.MemberId} | " +
+                $"Trainer: {session.TrainerId} | " +
+                $"Duration: {session.DurationMinutes} min | " +
+                $"Intensity: {session.Intensity} | " +
+                $"Status: {session.Status}");
         }
         break;
 
-    case Result<IReadOnlyList<Membership>>.Failure(var code, var message):
+    case Result<IReadOnlyList<WorkoutSession>>.Failure(var code, var message):
         Console.WriteLine($"Error: {code}");
         Console.WriteLine(message);
         break;
+}
+
+Console.WriteLine("\n=== Functional Pricing Test ===");
+
+var studentPricing = FunctionalPricing.CreateStudentPricing();
+var vipPricing = FunctionalPricing.CreateVIPPricing();
+
+Console.WriteLine("\nStudent Pricing (20% discount):");
+
+foreach (MembershipType type in Enum.GetValues<MembershipType>())
+{
+    Console.WriteLine($"{type}: {studentPricing(type)} KZT");
+}
+
+Console.WriteLine("\nVIP Pricing (10% discount):");
+
+foreach (MembershipType type in Enum.GetValues<MembershipType>())
+{
+    Console.WriteLine($"{type}: {vipPricing(type)} KZT");
 }
