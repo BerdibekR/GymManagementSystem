@@ -73,4 +73,32 @@ public static class WorkoutsService
                 .Append(session)
                 .ToArray());
     }
+
+    public static Result<IReadOnlyList<WorkoutSession>> CompleteWorkout(
+        IReadOnlyList<WorkoutSession> sessions,
+        int sessionId)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+
+        var session = sessions.FirstOrDefault(s => s.Id == sessionId);
+
+        if (session is null)
+            return Result<IReadOnlyList<WorkoutSession>>.Fail(
+                "SESSION_NOT_FOUND",
+                "Workout session was not found.");
+
+        if (session.Status != WorkoutStatus.Scheduled)
+            return Result<IReadOnlyList<WorkoutSession>>.Fail(
+                "INVALID_SESSION_STATUS",
+                "Only scheduled workouts can be completed.");
+
+        var completedSession = session.Complete();
+
+        var updatedSessions = sessions
+            .Select(s => s.Id == sessionId ? completedSession : s)
+            .ToArray();
+
+        return Result<IReadOnlyList<WorkoutSession>>.Ok(
+            updatedSessions);
+    }
 }
