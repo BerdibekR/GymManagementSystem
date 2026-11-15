@@ -2,6 +2,7 @@
 using GymManagementSystem.Models;
 using GymManagementSystem.Persistence;
 using GymManagementSystem.Workflows;
+using GymManagementSystem.Reports;
 
 namespace GymManagementSystem.Tests;
 
@@ -338,5 +339,219 @@ public class UnitTest1
         Assert.Equal(
             WorkoutStatus.Completed,
             success.Value[0].Status);
+    }
+
+    [Fact]
+    public void BookWorkout_MissingTrainer_ReturnsFailure()
+    {
+        var member = Assert.IsType<Result<Member>.Success>(
+            Member.Create(1, "Michael Jordan", 22)).Value;
+
+        IReadOnlyList<Member> members = new[] { member };
+        IReadOnlyList<Trainer> trainers = Array.Empty<Trainer>();
+        IReadOnlyList<WorkoutSession> sessions =
+            Array.Empty<WorkoutSession>();
+
+        var result = WorkoutsService.BookWorkout(
+            members, trainers, sessions,
+            1, 1, 99,
+            new DateTime(2026, 11, 17, 10, 0, 0),
+            60, WorkoutIntensity.High);
+
+        var failure =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Failure>(result);
+
+        Assert.Equal("TRAINER_NOT_FOUND", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void BookWorkout_MemberScheduleConflict_ReturnsFailure()
+    {
+        var member = Assert.IsType<Result<Member>.Success>(
+            Member.Create(1, "Michael Jordan", 22)).Value;
+
+        var trainer = Assert.IsType<Result<Trainer>.Success>(
+            Trainer.Create(1, "John Smith", "Fitness", 3)).Value;
+
+        var existing = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                1, 1, 1,
+                new DateTime(2026, 11, 17, 10, 0, 0),
+                60, WorkoutIntensity.High)).Value;
+
+        IReadOnlyList<Member> members = new[] { member };
+        IReadOnlyList<Trainer> trainers = new[] { trainer };
+        IReadOnlyList<WorkoutSession> sessions = new[] { existing };
+
+        var result = WorkoutsService.BookWorkout(
+            members, trainers, sessions,
+            2, 1, 1,
+            new DateTime(2026, 11, 17, 10, 30, 0),
+            60, WorkoutIntensity.Medium);
+
+        var failure =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Failure>(result);
+
+        Assert.Equal("MEMBER_SCHEDULE_CONFLICT", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void BookWorkout_TrainerCapacityReached_ReturnsFailure()
+    {
+        var member1 = Assert.IsType<Result<Member>.Success>(
+            Member.Create(1, "Michael Jordan", 22)).Value;
+
+        var member2 = Assert.IsType<Result<Member>.Success>(
+            Member.Create(2, "Stephen Curry", 30)).Value;
+
+        var trainer = Assert.IsType<Result<Trainer>.Success>(
+            Trainer.Create(1, "John Smith", "Fitness", 1)).Value;
+
+        var existing = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                1, 1, 1,
+                new DateTime(2026, 11, 17, 10, 0, 0),
+                60, WorkoutIntensity.High)).Value;
+
+        IReadOnlyList<Member> members = new[] { member1, member2 };
+        IReadOnlyList<Trainer> trainers = new[] { trainer };
+        IReadOnlyList<WorkoutSession> sessions = new[] { existing };
+
+        var result = WorkoutsService.BookWorkout(
+            members, trainers, sessions,
+            2, 2, 1,
+            new DateTime(2026, 11, 17, 10, 30, 0),
+            60, WorkoutIntensity.Medium);
+
+        var failure =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Failure>(result);
+
+        Assert.Equal("TRAINER_CAPACITY_REACHED", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void MembershipRevenueReport_Generate_CalculatesCorrectTotals()
+    {
+        var first = Assert.IsType<Result<Membership>.Success>(
+            Membership.Create(
+                1, 1, MembershipType.Basic,
+                new DateOnly(2026, 1, 1),
+                new DateOnly(2026, 12, 31),
+                10000m)).Value;
+
+        var second = Assert.IsType<Result<Membership>.Success>(
+            Membership.Create(
+                2, 2, MembershipType.Basic,
+                new DateOnly(2026, 1, 1),
+                new DateOnly(2026, 12, 31),
+                12000m)).Value;
+
+        var third = Assert.IsType<Result<Membership>.Success>(
+            Membership.Create(
+                3, 3, MembershipType.Premium,
+                new DateOnly(2026, 1, 1),
+                new DateOnly(2026, 12, 31),
+                30000m)).Value;
+
+        var report = MembershipRevenueReport.Generate(
+            new[] { first, second, third });
+
+        Assert.Equal(3, report.TotalMemberships);
+        Assert.Equal(52000m, report.TotalRevenue);
+
+        var basic = report.RevenueByType.Single(
+            item => item.Type == MembershipType.Basic);
+
+        Assert.Equal(2, basic.MembershipCount);
+        Assert.Equal(22000m, basic.TotalRevenue);
+        Assert.Equal(11000m, basic.AveragePrice);
+
+        var premium = report.RevenueByType.Single(
+            item => item.Type == MembershipType.Premium);
+
+        Assert.Equal(1, premium.MembershipCount);
+        Assert.Equal(30000m, premium.TotalRevenue);
+    }
+
+
+    [Fact]
+    public void MembershipRevenueReport_Generate_OrdersByRevenueDescending()
+    {
+        var basic = Assert.IsType<Result<Membership>.Success>(
+            Membership.Create(
+                1, 1, MembershipType.Basic,
+                new DateOnly(2026, 1, 1),
+                new DateOnly(2026, 12, 31),
+                10000m)).Value;
+
+        var premium = Assert.IsType<Result<Membership>.Success>(
+            Membership.Create(
+                2, 2, MembershipType.Premium,
+                new DateOnly(2026, 1, 1),
+                new DateOnly(2026, 12, 31),
+                30000m)).Value;
+
+        var report = MembershipRevenueReport.Generate(
+            new[] { basic, premium });
+
+        Assert.Equal(
+            MembershipType.Premium,
+            report.RevenueByType[0].Type);
+
+        Assert.Equal(
+            MembershipType.Basic,
+            report.RevenueByType[1].Type);
+    }
+
+    [Fact]
+    public void TrainerPerformanceReport_Generate_CalculatesCorrectStatistics()
+    {
+        var trainer = Assert.IsType<Result<Trainer>.Success>(
+            Trainer.Create(1, "Cristiano Ronaldo", "Fitness", 3)).Value;
+
+        var session1 = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                1, 1, 1,
+                new DateTime(2026, 11, 17, 10, 0, 0),
+                60, WorkoutIntensity.High)).Value.Complete();
+
+        var session2 = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                2, 2, 1,
+                new DateTime(2026, 11, 18, 10, 0, 0),
+                45, WorkoutIntensity.Medium)).Value.Complete();
+
+        var session3 = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                3, 3, 1,
+                new DateTime(2026, 11, 19, 10, 0, 0),
+                30, WorkoutIntensity.High)).Value;
+
+        var report = TrainerPerformanceReport.Generate(
+            new[] { trainer },
+            new[] { session1, session2, session3 });
+
+        var result = Assert.Single(report);
+
+        Assert.Equal(2, result.CompletedSessions);
+        Assert.Equal(105, result.TotalMinutes);
+        Assert.Equal(1, result.HighIntensitySessions);
+    }
+
+    [Fact]
+    public void TrainerPerformanceReport_Generate_IncludesTrainerWithoutSessions()
+    {
+        var trainer = Assert.IsType<Result<Trainer>.Success>(
+            Trainer.Create(1, "John Smith", "Fitness", 3)).Value;
+
+        var report = TrainerPerformanceReport.Generate(
+            new[] { trainer },
+            Array.Empty<WorkoutSession>());
+
+        var result = Assert.Single(report);
+
+        Assert.Equal(0, result.CompletedSessions);
+        Assert.Equal(0, result.TotalMinutes);
+        Assert.Equal(0, result.HighIntensitySessions);
     }
 }
