@@ -30,10 +30,35 @@ public static class WorkoutsService
                 "MEMBER_NOT_FOUND",
                 "Member was not found.");
 
-        if (!trainers.Any(t => t.Id == trainerId))
+        var trainer = trainers.FirstOrDefault(t => t.Id == trainerId);
+
+        if (trainer is null)
             return Result<IReadOnlyList<WorkoutSession>>.Fail(
                 "TRAINER_NOT_FOUND",
                 "Trainer was not found.");
+
+        var endTime = startTime.AddMinutes(durationMinutes);
+
+        var overlappingSessions = sessions
+            .Where(s => s.Status == WorkoutStatus.Scheduled)
+            .Where(s =>
+                s.StartTime < endTime &&
+                startTime < s.StartTime.AddMinutes(s.DurationMinutes))
+            .ToArray();
+
+        if (overlappingSessions.Any(s => s.MemberId == memberId))
+            return Result<IReadOnlyList<WorkoutSession>>.Fail(
+                "MEMBER_SCHEDULE_CONFLICT",
+                "Member already has a workout at this time.");
+
+        var trainerSessions = overlappingSessions
+            .Where(s => s.TrainerId == trainerId)
+            .ToArray();
+
+        if (trainerSessions.Length >= trainer.MaxClients)
+            return Result<IReadOnlyList<WorkoutSession>>.Fail(
+                "TRAINER_CAPACITY_REACHED",
+                "Trainer has reached the maximum number of clients.");
 
         var sessionResult = WorkoutSession.Create(
             sessionId,
