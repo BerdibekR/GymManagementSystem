@@ -1,25 +1,41 @@
 ﻿using GymManagementSystem.Functional;
-using GymManagementSystem.Persistence;
 using GymManagementSystem.Models;
+using GymManagementSystem.Persistence;
 
-var result = TrainerDataLoader.LoadTrainers("data/trainers.json");
+var membersResult =
+    MemberDataLoader.LoadMembers("data/members.json");
 
-switch (result)
+if (membersResult is Result<IReadOnlyList<Member>>.Failure memberError)
 {
-    case Result<IReadOnlyList<Trainer>>.Success(var trainers):
-        Console.WriteLine("Trainers loaded successfully!");
-        Console.WriteLine($"Total trainers: {trainers.Count}");
+    Console.WriteLine($"Member loading error: {memberError.Message}");
+    return;
+}
 
-        foreach (var trainer in trainers)
+var members =
+    ((Result<IReadOnlyList<Member>>.Success)membersResult).Value;
+
+var membershipsResult =
+    MembershipDataLoader.LoadMemberships(
+        "data/memberships.json",
+        members);
+
+switch (membershipsResult)
+{
+    case Result<IReadOnlyList<Membership>>.Success(var memberships):
+        Console.WriteLine("Memberships loaded successfully!");
+        Console.WriteLine($"Total memberships: {memberships.Count}");
+
+        foreach (var membership in memberships)
         {
             Console.WriteLine(
-                $"{trainer.Id}. {trainer.Name} | " +
-                $"{trainer.Specialization} | " +
-                $"Max clients: {trainer.MaxClients}");
+                $"ID: {membership.Id} | " +
+                $"Member ID: {membership.MemberId} | " +
+                $"Type: {membership.Type} | " +
+                $"Price: {membership.Price}");
         }
         break;
 
-    case Result<IReadOnlyList<Trainer>>.Failure(var code, var message):
+    case Result<IReadOnlyList<Membership>>.Failure(var code, var message):
         Console.WriteLine($"Error: {code}");
         Console.WriteLine(message);
         break;

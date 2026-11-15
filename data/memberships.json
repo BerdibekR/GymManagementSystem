@@ -1,0 +1,26 @@
+[
+  {
+    "Id": 1,
+    "MemberId": 1,
+    "Type": "Premium",
+    "StartDate": "2026-01-01",
+    "EndDate": "2026-12-31",
+    "Price": 30000
+  },
+  {
+    "Id": 2,
+    "MemberId": 2,
+    "Type": "Standard",
+    "StartDate": "2026-02-01",
+    "EndDate": "2026-07-31",
+    "Price": 18000
+  },
+  {
+    "Id": 3,
+    "MemberId": 3,
+    "Type": "Basic",
+    "StartDate": "2026-03-01",
+    "EndDate": "2026-05-31",
+    "Price": 10000
+  }
+]

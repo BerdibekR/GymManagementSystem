@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using GymManagementSystem.Functional;
 
 namespace GymManagementSystem.Persistence;
@@ -7,7 +8,8 @@ public static class JsonFileStore<T>
 {
     private static readonly JsonSerializerOptions Options = new()
     {
-        WriteIndented = true
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public static Result<bool> Save(string filePath, T data)
@@ -51,14 +53,10 @@ public static class JsonFileStore<T>
         try
         {
             var json = File.ReadAllText(filePath);
-
-            var data = JsonSerializer.Deserialize<T>(
-                json, Options);
+            var data = JsonSerializer.Deserialize<T>(json, Options);
 
             return data is null
-                ? Result<T>.Fail(
-                    "EMPTY_DATA",
-                    "The JSON file contains no valid data.")
+                ? Result<T>.Fail("EMPTY_DATA", "The JSON file contains no valid data.")
                 : Result<T>.Ok(data);
         }
         catch (Exception ex) when (
