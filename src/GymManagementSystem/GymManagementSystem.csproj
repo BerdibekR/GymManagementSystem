@@ -7,4 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+  <None Include="..\..\native\workout_calculator.dll"
+        Link="workout_calculator.dll"
+        CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
 </Project>
