@@ -52,6 +52,27 @@ switch (sessionsResult)
                 $"Intensity: {session.Intensity} | " +
                 $"Status: {session.Status}");
         }
+
+        Console.WriteLine("\n=== Deferred Execution Test ===");
+
+        var lazySessions =
+            WorkoutSequence.GetScheduledSessions(sessions);
+
+        Console.WriteLine("Sequence created. No sessions processed yet.");
+
+        Console.WriteLine("\nMaterializing sequence with ToList():");
+
+        var scheduledSessions = lazySessions.ToList();
+
+        Console.WriteLine(
+            $"Scheduled sessions loaded: {scheduledSessions.Count}");
+
+        var highIntensitySessions =
+            WorkoutSequence.GetHighIntensitySessions(sessions).ToArray();
+
+        Console.WriteLine(
+            $"High intensity sessions: {highIntensitySessions.Length}");
+
         break;
 
     case Result<IReadOnlyList<WorkoutSession>>.Failure(var code, var message):
