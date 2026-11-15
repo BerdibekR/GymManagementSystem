@@ -1,0 +1,20 @@
+[
+  {
+    "Id": 1,
+    "Name": "Cristiano Ronaldo",
+    "Specialization": "Strength Training",
+    "MaxClients": 3
+  },
+  {
+    "Id": 2,
+    "Name": "Lionel Messi",
+    "Specialization": "Cardio",
+    "MaxClients": 4
+  },
+  {
+    "Id": 3,
+    "Name": "Kylian Mbappe",
+    "Specialization": "CrossFit",
+    "MaxClients": 2
+  }
+]

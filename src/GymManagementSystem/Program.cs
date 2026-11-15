@@ -1,27 +1,25 @@
 ﻿using GymManagementSystem.Functional;
 using GymManagementSystem.Persistence;
+using GymManagementSystem.Models;
 
-var result = MemberDataLoader.LoadMembers("data/members.json");
+var result = TrainerDataLoader.LoadTrainers("data/trainers.json");
 
 switch (result)
 {
-    case Result<IReadOnlyList<GymManagementSystem.Models.Member>>
-        .Success(var members):
+    case Result<IReadOnlyList<Trainer>>.Success(var trainers):
+        Console.WriteLine("Trainers loaded successfully!");
+        Console.WriteLine($"Total trainers: {trainers.Count}");
 
-        Console.WriteLine("Members loaded successfully!");
-        Console.WriteLine($"Total members: {members.Count}");
-
-        foreach (var member in members)
+        foreach (var trainer in trainers)
         {
             Console.WriteLine(
-                $"{member.Id}. {member.Name}, Age: {member.Age}");
+                $"{trainer.Id}. {trainer.Name} | " +
+                $"{trainer.Specialization} | " +
+                $"Max clients: {trainer.MaxClients}");
         }
-
         break;
 
-    case Result<IReadOnlyList<GymManagementSystem.Models.Member>>
-        .Failure(var code, var message):
-
+    case Result<IReadOnlyList<Trainer>>.Failure(var code, var message):
         Console.WriteLine($"Error: {code}");
         Console.WriteLine(message);
         break;
