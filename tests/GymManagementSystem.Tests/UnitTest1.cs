@@ -1,0 +1,342 @@
+﻿using GymManagementSystem.Functional;
+using GymManagementSystem.Models;
+using GymManagementSystem.Persistence;
+using GymManagementSystem.Workflows;
+
+namespace GymManagementSystem.Tests;
+
+public class UnitTest1
+{
+    [Fact]
+    public void Member_Create_ValidData_ReturnsSuccess()
+    {
+        var result = Member.Create(1, "Michael Jordan", 22);
+
+        Assert.IsType<Result<Member>.Success>(result);
+    }
+
+    [Fact]
+    public void Member_Create_InvalidId_ReturnsFailure()
+    {
+        var result = Member.Create(0, "Michael Jordan", 22);
+
+        Assert.IsType<Result<Member>.Failure>(result);
+    }
+
+    [Fact]
+    public void Member_Create_InvalidAge_ReturnsFailure()
+    {
+        var result = Member.Create(1, "Michael Jordan", 15);
+
+        Assert.IsType<Result<Member>.Failure>(result);
+    }
+
+    [Fact]
+    public void Member_Create_EmptyName_ReturnsFailure()
+    {
+        var result = Member.Create(1, "", 22);
+
+        Assert.IsType<Result<Member>.Failure>(result);
+    }
+
+    [Fact]
+    public void Trainer_Create_ValidData_ReturnsSuccess()
+    {
+        var result = Trainer.Create(
+            1,
+            "Cristiano Ronaldo",
+            "Strength Training",
+            3);
+
+        Assert.IsType<Result<Trainer>.Success>(result);
+    }
+
+    [Fact]
+    public void Trainer_Create_InvalidCapacity_ReturnsFailure()
+    {
+        var result = Trainer.Create(
+            1,
+            "Cristiano Ronaldo",
+            "Strength Training",
+            0);
+
+        Assert.IsType<Result<Trainer>.Failure>(result);
+    }
+
+    [Fact]
+    public void Membership_Create_ValidData_ReturnsSuccess()
+    {
+        var result = Membership.Create(
+            1,
+            1,
+            MembershipType.Premium,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 12, 31),
+            30000m);
+
+        Assert.IsType<Result<Membership>.Success>(result);
+    }
+
+    [Fact]
+    public void Membership_Create_InvalidDates_ReturnsFailure()
+    {
+        var result = Membership.Create(
+            1,
+            1,
+            MembershipType.Basic,
+            new DateOnly(2026, 12, 31),
+            new DateOnly(2026, 1, 1),
+            10000m);
+
+        Assert.IsType<Result<Membership>.Failure>(result);
+    }
+
+    [Fact]
+    public void WorkoutSession_Create_ValidData_ReturnsSuccess()
+    {
+        var result = WorkoutSession.Create(
+            1,
+            1,
+            1,
+            new DateTime(2026, 11, 17, 10, 0, 0),
+            60,
+            WorkoutIntensity.High);
+
+        Assert.IsType<Result<WorkoutSession>.Success>(result);
+    }
+
+    [Fact]
+    public void WorkoutSession_Create_InvalidDuration_ReturnsFailure()
+    {
+        var result = WorkoutSession.Create(
+            1,
+            1,
+            1,
+            new DateTime(2026, 11, 17, 10, 0, 0),
+            5,
+            WorkoutIntensity.Low);
+
+        Assert.IsType<Result<WorkoutSession>.Failure>(result);
+    }
+
+    [Fact]
+    public void Result_Map_TransformsSuccessValue()
+    {
+        Result<int> result = Result<int>.Ok(10);
+
+        var mapped = result.Map(value => value * 2);
+
+        var success = Assert.IsType<Result<int>.Success>(mapped);
+
+        Assert.Equal(20, success.Value);
+    }
+
+    [Fact]
+    public void Result_Bind_PropagatesFailure()
+    {
+        Result<int> result =
+            Result<int>.Fail("TEST_ERROR", "Test failure");
+
+        var bound = result.Bind(
+            value => Result<string>.Ok(value.ToString()));
+
+        var failure =
+            Assert.IsType<Result<string>.Failure>(bound);
+
+        Assert.Equal("TEST_ERROR", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void JsonFileStore_Load_MissingFile_ReturnsFailure()
+    {
+        var filePath = Path.Combine(
+            Path.GetTempPath(),
+            Guid.NewGuid() + ".json");
+
+        var result = JsonFileStore<List<Member>>.Load(filePath);
+
+        var failure =
+            Assert.IsType<Result<List<Member>>.Failure>(result);
+
+        Assert.Equal("FILE_NOT_FOUND", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void JsonFileStore_Load_MalformedJson_ReturnsFailure()
+    {
+        var filePath = Path.Combine(
+            Path.GetTempPath(),
+            Guid.NewGuid() + ".json");
+
+        try
+        {
+            File.WriteAllText(filePath, "{ invalid json }");
+
+            var result =
+                JsonFileStore<List<Member>>.Load(filePath);
+
+            Assert.IsType<Result<List<Member>>.Failure>(result);
+        }
+        finally
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void RegisterMember_ValidMember_AddsMemberToList()
+    {
+        IReadOnlyList<Member> members = Array.Empty<Member>();
+
+        var result = MemberService.RegisterMember(
+            members,
+            1,
+            "Cristiano Ronaldo",
+            25);
+
+        var success =
+            Assert.IsType<Result<IReadOnlyList<Member>>.Success>(result);
+
+        Assert.Single(success.Value);
+        Assert.Equal("Cristiano Ronaldo", success.Value[0].Name);
+    }
+
+    [Fact]
+    public void RegisterMember_DuplicateId_ReturnsFailure()
+    {
+        var existingResult = Member.Create(
+            1,
+            "Michael Jordan",
+            22);
+
+        var existing =
+            Assert.IsType<Result<Member>.Success>(existingResult).Value;
+
+        IReadOnlyList<Member> members = new[] { existing };
+
+        var result = MemberService.RegisterMember(
+            members,
+            1,
+            "Stephen Curry",
+            30);
+
+        Assert.IsType<Result<IReadOnlyList<Member>>.Failure>(result);
+    }
+
+    [Fact]
+    public void CreateMembership_ValidData_ReturnsSuccess()
+    {
+        var memberResult = Member.Create(
+            1,
+            "Cristiano Ronaldo",
+            25);
+
+        var member =
+            Assert.IsType<Result<Member>.Success>(memberResult).Value;
+
+        IReadOnlyList<Member> members = new[] { member };
+        IReadOnlyList<Membership> memberships =
+            Array.Empty<Membership>();
+
+        var result = MembershipService.CreateMembership(
+            members,
+            memberships,
+            1,
+            1,
+            MembershipType.Premium,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 12, 31),
+            PricingPolicies.StandardPricing);
+
+        var success =
+            Assert.IsType<Result<IReadOnlyList<Membership>>.Success>(result);
+
+        Assert.Single(success.Value);
+        Assert.Equal(30000m, success.Value[0].Price);
+    }
+
+    [Fact]
+    public void CreateMembership_MissingMember_ReturnsFailure()
+    {
+        IReadOnlyList<Member> members = Array.Empty<Member>();
+        IReadOnlyList<Membership> memberships =
+            Array.Empty<Membership>();
+
+        var result = MembershipService.CreateMembership(
+            members,
+            memberships,
+            1,
+            99,
+            MembershipType.Basic,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 12, 31),
+            PricingPolicies.StandardPricing);
+
+        Assert.IsType<Result<IReadOnlyList<Membership>>.Failure>(result);
+    }
+
+    [Fact]
+    public void BookWorkout_ValidData_AddsSession()
+    {
+        var memberResult = Member.Create(
+            1, "Cristiano Ronaldo", 25);
+
+        var trainerResult = Trainer.Create(
+            1, "John Smith", "Strength Training", 3);
+
+        var member =
+            Assert.IsType<Result<Member>.Success>(memberResult).Value;
+
+        var trainer =
+            Assert.IsType<Result<Trainer>.Success>(trainerResult).Value;
+
+        IReadOnlyList<Member> members = new[] { member };
+        IReadOnlyList<Trainer> trainers = new[] { trainer };
+        IReadOnlyList<WorkoutSession> sessions =
+            Array.Empty<WorkoutSession>();
+
+        var result = WorkoutsService.BookWorkout(
+            members,
+            trainers,
+            sessions,
+            1,
+            1,
+            1,
+            new DateTime(2026, 11, 17, 10, 0, 0),
+            60,
+            WorkoutIntensity.High);
+
+        var success =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Success>(result);
+
+        Assert.Single(success.Value);
+        Assert.Equal(WorkoutStatus.Scheduled, success.Value[0].Status);
+    }
+
+    [Fact]
+    public void CompleteWorkout_ScheduledSession_ChangesStatusToCompleted()
+    {
+        var sessionResult = WorkoutSession.Create(
+            1,
+            1,
+            1,
+            new DateTime(2026, 11, 17, 10, 0, 0),
+            60,
+            WorkoutIntensity.High);
+
+        var session =
+            Assert.IsType<Result<WorkoutSession>.Success>(sessionResult).Value;
+
+        IReadOnlyList<WorkoutSession> sessions = new[] { session };
+
+        var result = WorkoutsService.CompleteWorkout(sessions, 1);
+
+        var success =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Success>(result);
+
+        Assert.Equal(
+            WorkoutStatus.Completed,
+            success.Value[0].Status);
+    }
+}
