@@ -3,6 +3,7 @@ using GymManagementSystem.Models;
 using GymManagementSystem.Persistence;
 using GymManagementSystem.Workflows;
 using GymManagementSystem.Reports;
+using GymManagementSystem.Extensions;
 
 namespace GymManagementSystem.Tests;
 
@@ -553,5 +554,108 @@ public class UnitTest1
         Assert.Equal(0, result.CompletedSessions);
         Assert.Equal(0, result.TotalMinutes);
         Assert.Equal(0, result.HighIntensitySessions);
+    }
+
+    [Fact]
+    public void MemberExtensions_IsAdult_ReturnsCorrectResult()
+    {
+        var adult = Assert.IsType<Result<Member>.Success>(
+            Member.Create(1, "Michael Jordan", 22)).Value;
+
+        var minor = Assert.IsType<Result<Member>.Success>(
+            Member.Create(2, "Young Member", 16)).Value;
+
+        Assert.True(adult.IsAdult());
+        Assert.False(minor.IsAdult());
+    }
+
+    [Fact]
+    public void MemberExtensions_ToDisplayLabel_ReturnsFormattedLabel()
+    {
+        var member = Assert.IsType<Result<Member>.Success>(
+            Member.Create(1, "Michael Jordan", 22)).Value;
+
+        var label = member.ToDisplayLabel();
+
+        Assert.Equal("Michael Jordan (ID: 1)", label);
+    }
+
+    [Theory]
+    [InlineData(WorkoutIntensity.Low, 60, 60.0)]
+    [InlineData(WorkoutIntensity.Medium, 60, 90.0)]
+    [InlineData(WorkoutIntensity.High, 60, 120.0)]
+    public void WorkoutLoadService_CalculateLoad_ReturnsCorrectValue(
+        WorkoutIntensity intensity,
+        int duration,
+        double expected)
+    {
+        var session = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                100,
+                1,
+                1,
+                DateTime.Now,
+                duration,
+                intensity)).Value;
+
+        var result = WorkoutLoadService.CalculateLoad(session);
+
+        var success = Assert.IsType<Result<double>.Success>(result);
+        Assert.Equal(expected, success.Value);
+    }
+
+    [Fact]
+    public void CancelWorkout_ScheduledSession_CancelsSuccessfully()
+    {
+        var member = Assert.IsType<Result<Member>.Success>(
+            Member.Create(1, "Michael Jordan", 22)).Value;
+
+        var trainer = Assert.IsType<Result<Trainer>.Success>(
+            Trainer.Create(1, "John Smith", "Fitness", 3)).Value;
+
+        var session = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                1, 1, 1, DateTime.Now.AddDays(1), 60,
+                WorkoutIntensity.Medium)).Value;
+
+        var result = WorkoutsService.CancelWorkout(
+            new[] { session }, 1);
+
+        var updatedSessions =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Success>(
+                result).Value;
+
+        Assert.Equal(WorkoutStatus.Cancelled, updatedSessions[0].Status);
+    }
+
+    [Fact]
+    public void CancelWorkout_CompletedSession_ReturnsFailure()
+    {
+        var session = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                1, 1, 1, DateTime.Now.AddDays(1), 60,
+                WorkoutIntensity.Medium)).Value.Complete();
+
+        var result = WorkoutsService.CancelWorkout(
+            new[] { session }, 1);
+
+        var failure =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Failure>(
+                result);
+
+        Assert.Equal("INVALID_SESSION_STATUS", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void CancelWorkout_MissingSession_ReturnsFailure()
+    {
+        var result = WorkoutsService.CancelWorkout(
+            Array.Empty<WorkoutSession>(), 999);
+
+        var failure =
+            Assert.IsType<Result<IReadOnlyList<WorkoutSession>>.Failure>(
+                result);
+
+        Assert.Equal("SESSION_NOT_FOUND", failure.ErrorCode);
     }
 }

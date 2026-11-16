@@ -15,7 +15,7 @@
     "StartTime": "2026-11-17T12:00:00",
     "DurationMinutes": 45,
     "Intensity": "Medium",
-    "Status": "Scheduled"
+    "Status": "Cancelled"
   },
   {
     "Id": 3,
@@ -25,5 +25,14 @@
     "DurationMinutes": 90,
     "Intensity": "High",
     "Status": "Scheduled"
+  },
+  {
+    "Id": 4,
+    "MemberId": 5,
+    "TrainerId": 1,
+    "StartTime": "2026-12-02T10:00:00",
+    "DurationMinutes": 60,
+    "Intensity": "Medium",
+    "Status": "Completed"
   }
 ]

@@ -22,5 +22,13 @@
     "StartDate": "2026-03-01",
     "EndDate": "2026-05-31",
     "Price": 10000
+  },
+  {
+    "Id": 4,
+    "MemberId": 5,
+    "Type": "Premium",
+    "StartDate": "2026-12-01",
+    "EndDate": "2027-01-01",
+    "Price": 30000
   }
 ]
