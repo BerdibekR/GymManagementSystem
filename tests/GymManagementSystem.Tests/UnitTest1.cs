@@ -4,6 +4,7 @@ using GymManagementSystem.Persistence;
 using GymManagementSystem.Workflows;
 using GymManagementSystem.Reports;
 using GymManagementSystem.Extensions;
+using GymManagementSystem.Pipeline;
 
 namespace GymManagementSystem.Tests;
 
@@ -657,5 +658,67 @@ public class UnitTest1
                 result);
 
         Assert.Equal("SESSION_NOT_FOUND", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void WorkoutAnalysisPipeline_NoCompletedSessions_ReturnsEmptyResult()
+    {
+        var session = Assert.IsType<Result<WorkoutSession>.Success>(
+            WorkoutSession.Create(
+                1, 1, 1,
+                new DateTime(2026, 12, 1, 10, 0, 0),
+                60,
+                WorkoutIntensity.High)).Value;
+
+        var result = WorkoutAnalysisPipeline.Run(
+            new[] { session });
+
+        var success =
+            Assert.IsType<Result<IReadOnlyList<WorkoutLoadResult>>.Success>(
+                result);
+
+        Assert.Empty(success.Value);
+    }
+
+    [Fact]
+    public void WorkoutAnalysisPipeline_NullInput_ReturnsFailure()
+    {
+        var result = WorkoutAnalysisPipeline.Run(null!);
+
+        var failure =
+            Assert.IsType<Result<IReadOnlyList<WorkoutLoadResult>>.Failure>(
+                result);
+
+        Assert.Equal("INVALID_INPUT", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void WorkoutAnalysisPipeline_CompletedSession_CalculatesNativeWorkload()
+    {
+        var created = WorkoutSession.Create(
+            1,
+            1,
+            1,
+            new DateTime(2026, 12, 1, 10, 0, 0),
+            60,
+            WorkoutIntensity.High);
+
+        var session =
+            Assert.IsType<Result<WorkoutSession>.Success>(created).Value
+                .Complete();
+
+        var result = WorkoutAnalysisPipeline.Run(
+            new[] { session });
+
+        var success =
+            Assert.IsType<Result<IReadOnlyList<WorkoutLoadResult>>.Success>(
+                result);
+
+        var workload = Assert.Single(success.Value);
+
+        Assert.Equal(1, workload.SessionId);
+        Assert.Equal(60, workload.DurationMinutes);
+        Assert.Equal(WorkoutIntensity.High, workload.Intensity);
+        Assert.Equal(120.0, workload.Workload);
     }
 }

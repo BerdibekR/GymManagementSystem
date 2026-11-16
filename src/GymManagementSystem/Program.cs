@@ -2,6 +2,8 @@
 using GymManagementSystem.Models;
 using GymManagementSystem.Persistence;
 using GymManagementSystem.Workflows;
+using GymManagementSystem.Reports;
+using GymManagementSystem.Pipeline;
 
 var membersResult =
     MemberDataLoader.LoadMembers("data/members.json");
@@ -149,6 +151,9 @@ while (true)
     Console.WriteLine("5. Book workout");
     Console.WriteLine("6. Complete workout");
     Console.WriteLine("7. Cancel workout");
+    Console.WriteLine("8. Membership revenue report");
+    Console.WriteLine("9. Trainer performance report");
+    Console.WriteLine("10. Analyze completed workouts (Pipeline)");
     Console.WriteLine("0. Exit");
     Console.Write("Choose an option: ");
 
@@ -501,6 +506,85 @@ while (true)
 
                 case Result<IReadOnlyList<WorkoutSession>>.Failure(var errorCode, var errorMessage):
                     Console.WriteLine($"{errorCode}: {errorMessage}");
+                    break;
+            }
+            break;
+
+        case "8":
+            Console.WriteLine("\n=== MEMBERSHIP REVENUE REPORT ===");
+
+            var revenueReport =
+                MembershipRevenueReport.Generate(memberships);
+
+            Console.WriteLine(
+                $"Total memberships: {revenueReport.TotalMemberships}");
+
+            Console.WriteLine(
+                $"Total revenue: {revenueReport.TotalRevenue} KZT");
+
+            Console.WriteLine("\nRevenue by membership type:");
+
+            foreach (var item in revenueReport.RevenueByType)
+            {
+                Console.WriteLine(
+                    $"{item.Type}: Count = {item.MembershipCount}, " +
+                    $"Revenue = {item.TotalRevenue} KZT, " +
+                    $"Average = {item.AveragePrice} KZT");
+            }
+            break;
+
+        case "9":
+            Console.WriteLine("\n=== TRAINER PERFORMANCE REPORT ===");
+
+            var trainerReport =
+                TrainerPerformanceReport.Generate(trainers, loadedSessions);
+
+            foreach (var item in trainerReport)
+            {
+                Console.WriteLine(
+                    $"Trainer: {item.TrainerName} | " +
+                    $"Completed sessions: {item.CompletedSessions} | " +
+                    $"Total minutes: {item.TotalMinutes} | " +
+                    $"High intensity: {item.HighIntensitySessions}");
+            }
+            break;
+
+        case "10":
+            Console.WriteLine("\n=== WORKOUT ANALYSIS PIPELINE ===");
+
+            var pipelineResult =
+                WorkoutAnalysisPipeline.Run(loadedSessions);
+
+            switch (pipelineResult)
+            {
+                case Result<IReadOnlyList<WorkoutLoadResult>>.Success(
+                    var workloadResults):
+
+                    if (workloadResults.Count == 0)
+                    {
+                        Console.WriteLine(
+                            "No completed workouts available for analysis.");
+                        break;
+                    }
+
+                    foreach (var item in workloadResults)
+                    {
+                        Console.WriteLine(
+                            $"Session ID: {item.SessionId} | " +
+                            $"Duration: {item.DurationMinutes} min | " +
+                            $"Intensity: {item.Intensity} | " +
+                            $"Workload: {item.Workload}");
+                    }
+
+                    Console.WriteLine(
+                        $"Total analyzed workouts: {workloadResults.Count}");
+                    break;
+
+                case Result<IReadOnlyList<WorkoutLoadResult>>.Failure(
+                    var errorCode, var errorMessage):
+
+                    Console.WriteLine(
+                        $"Pipeline error: {errorCode} - {errorMessage}");
                     break;
             }
             break;
