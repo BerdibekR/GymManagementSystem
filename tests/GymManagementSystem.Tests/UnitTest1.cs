@@ -5,6 +5,7 @@ using GymManagementSystem.Workflows;
 using GymManagementSystem.Reports;
 using GymManagementSystem.Extensions;
 using GymManagementSystem.Pipeline;
+using GymManagementSystem.Native;
 
 namespace GymManagementSystem.Tests;
 
@@ -720,5 +721,25 @@ public class UnitTest1
         Assert.Equal(60, workload.DurationMinutes);
         Assert.Equal(WorkoutIntensity.High, workload.Intensity);
         Assert.Equal(120.0, workload.Workload);
+    }
+
+    [Fact]
+    public void NativeWorkoutCalculator_ValidParameters_ReturnsCorrectLoad()
+    {
+        var result = NativeWorkoutCalculator.TryCalculateLoad(60, 3);
+
+        var success = Assert.IsType<Result<double>.Success>(result);
+
+        Assert.Equal(120.0, success.Value);
+    }
+
+    [Fact]
+    public void NativeWorkoutCalculator_InvalidParameters_ReturnsFailure()
+    {
+        var result = NativeWorkoutCalculator.TryCalculateLoad(0, 2);
+
+        var failure = Assert.IsType<Result<double>.Failure>(result);
+
+        Assert.Equal("INVALID_WORKOUT_PARAMETERS", failure.ErrorCode);
     }
 }
